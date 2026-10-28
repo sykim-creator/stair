@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>계단오르기 챌린지</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🏢 <span id="evName"></span></h1>
+  <p id="evPeriod"></p>
+</header>
+
+<main>
+  <!-- 1층 QR 없이 접속했을 때 / 만료된 QR -->
+  <section id="v-gate" class="hidden">
+    <div class="card big">
+      <div style="font-size:56px">📷</div>
+      <h2 id="gateTitle" style="margin-top:8px">1층 계단 입구의 QR 코드를 스캔해 주세요</h2>
+      <div id="gateMsg" class="msg">이 챌린지는 현장에 있는 QR 코드로만 참여할 수 있습니다.<br>휴대폰 카메라로 QR을 스캔하면 자동으로 열립니다.</div>
+    </div>
+  </section>
+
+  <!-- 기록 저장 완료 -->
+  <section id="v-done" class="hidden">
+    <div class="card big">
+      <div style="font-size:56px">🎉</div>
+      <div><span class="num" id="doneFloors">0</span><span class="unit">층</span></div>
+      <h2 style="margin-top:12px">기록이 저장되었습니다!</h2>
+      <div class="msg" id="doneMsg"></div>
+      <div class="msg" id="doneRank" style="font-weight:700"></div>
+      <div class="msg">다시 도전하려면 1층 계단 입구의 QR 코드를 다시 스캔해 주세요.</div>
+    </div>
+    <div class="card">
+      <h2 style="margin:0 0 8px">🏆 랭킹</h2>
+      <div class="tabs">
+        <button id="dTabInd" class="on">개인</button>
+        <button id="dTabTeam">계열사(평균)</button>
+      </div>
+      <div id="dRankList"></div>
+      <button class="ghost" id="dBtnRefresh">새로고침</button>
+    </div>
+  </section>
+
+  <!-- 참가 신청 / 로그인 -->
+  <section id="v-join" class="hidden">
+    <div class="card">
+      <h2>참가 신청</h2>
+      <label for="dept">계열사</label>
+      <select id="dept"></select>
+      <label for="name">이름</label>
+      <input id="name" autocomplete="name" placeholder="홍길동" maxlength="20">
+      <button id="btnJoin">로그인 / 참가하기</button>
+      <div class="msg">계열사와 이름이 로그인 정보입니다. 같은 정보로 다시 입력하면 기존 기록이 이어집니다.</div>
+      <div id="joinMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- 메인: 시작 전 -->
+  <section id="v-home" class="hidden">
+    <div class="card big">
+      <div id="who" class="msg" style="margin:0 0 12px"></div>
+      <h2 style="margin-bottom:10px">오늘의 도전</h2>
+      <div id="winList" class="wins"></div>
+      <button id="btnStart">▶ 오르기 시작</button>
+      <div id="homeMsg" class="msg">1층에서 시작 버튼을 누르고 10층까지 올라간 뒤, 10층의 <b>종료 QR</b>을 스캔하면 기록이 저장됩니다.</div>
+    </div>
+    <div class="card">
+      <h2>내 누적 기록</h2>
+      <div class="stats">
+        <div><b id="myTotal">-</b><small>누적 층</small></div>
+        <div><b id="myToday">-</b><small>오늘 층</small></div>
+        <div><b id="myRank">-</b><small>내 순위</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 진행 중 -->
+  <section id="v-run" class="hidden">
+    <div class="card big">
+      <div id="runWho" class="msg" style="margin:0 0 6px"></div>
+      <div id="runWin" class="badge-lg"></div>
+      <div><span class="num" id="runTime">00:00</span></div>
+      <div class="msg">진행 중입니다. 10층에 도착하면 아래 <b>[기록 종료]</b>를 누르고, 10층의 종료 QR을 스캔해 주세요.</div>
+      <button id="btnStop" class="danger">■ 기록 종료</button>
+      <button id="btnCancel" class="ghost">시작 취소</button>
+      <div id="runMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- 종료 QR 스캔 -->
+  <section id="v-scan" class="hidden">
+    <div class="card big">
+      <div id="scanPrompt">
+        <div style="font-size:56px">🔑</div>
+        <h2 style="margin-top:8px">종료 QR을 스캔해 주세요</h2>
+        <div class="msg">10층에 부착된 <b>종료 QR</b>을 스캔하면 기록이 저장됩니다.<br>경과 시간 <b id="scanTime">00:00</b></div>
+        <button id="btnOpenCam">📷 종료 QR 스캔하기</button>
+        <button id="btnPhoto" class="ghost">사진으로 스캔 (카메라가 안 열릴 때)</button>
+        <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden">
+        <button id="btnBackRun" class="ghost">← 돌아가기</button>
+      </div>
+      <div id="scanCam" class="hidden">
+        <div class="cam"><video id="video" playsinline muted></video><div class="cam-frame"></div></div>
+        <div class="msg">종료 QR이 사각형 안에 들어오게 비춰 주세요.</div>
+        <button id="btnCloseCam" class="ghost">카메라 닫기</button>
+      </div>
+      <div id="scanMsg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- 랭킹 -->
+  <section id="v-rank" class="hidden">
+    <div class="card">
+      <div class="tabs">
+        <button id="tabInd" class="on">개인</button>
+        <button id="tabTeam">계열사(평균)</button>
+      </div>
+      <div id="rankList"></div>
+      <button class="ghost" id="btnRefresh">새로고침</button>
+    </div>
+  </section>
+</main>
+
+<nav id="nav" class="hidden">
+  <button data-v="home" class="on"><span>🧗</span>오르기</button>
+  <button data-v="rank"><span>🏆</span>랭킹</button>
+</nav>
+
+<canvas id="grab" class="hidden"></canvas>
+<script src="config.js"></script>
+<script src="lib/jsQR.js"></script>
+<script src="api.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
