@@ -176,7 +176,7 @@
   async function openCamera() {
     const m = $('scanMsg');
     if (!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
-      return msg(m, '이 환경에서는 앱 안에서 카메라를 열 수 없습니다. [사진으로 스캔]을 이용해 주세요.', 'err');
+      return msg(m, '이 환경에서는 카메라를 열 수 없습니다. 휴대폰 기본 브라우저(사파리/크롬)로 이 페이지를 열어 주세요.', 'err');
     }
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -185,8 +185,8 @@
     } catch (e) {
       const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
       return msg(m, denied
-        ? '카메라 권한이 허용되지 않았습니다. 브라우저(주소창/설정)에서 이 사이트의 카메라를 허용하거나 [사진으로 스캔]을 이용해 주세요.'
-        : '카메라를 열 수 없습니다. [사진으로 스캔]을 이용해 주세요.', 'err');
+        ? '카메라 권한이 허용되지 않았습니다. 브라우저(주소창/설정)에서 이 사이트의 카메라를 허용해 주세요.'
+        : '카메라를 열 수 없습니다. 휴대폰 기본 브라우저(사파리/크롬)로 다시 열어 주세요.', 'err');
     }
     const v = $('video');
     v.srcObject = stream; v.setAttribute('playsinline', ''); v.muted = true;
@@ -220,23 +220,6 @@
     const r = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: inv });
     return r && r.data ? r.data : null;
   }
-
-  // 카메라가 막힌 환경(앱 내 브라우저 등)을 위한 대안: 사진 촬영 후 해석
-  $('btnPhoto').onclick = () => { $('photoInput').value = ''; $('photoInput').click(); };
-  $('photoInput').onchange = () => {
-    const f = $('photoInput').files && $('photoInput').files[0];
-    if (!f) return;
-    const img = new Image(), url = URL.createObjectURL(f);
-    img.onload = () => {
-      let code = null;
-      for (const w of [1024, 1600, 640]) { code = decode(img, img.naturalWidth, img.naturalHeight, w, 'attemptBoth'); if (code) break; }
-      URL.revokeObjectURL(url);
-      if (!code) return msg($('scanMsg'), '사진에서 QR을 찾지 못했습니다. QR이 화면 가운데에 크게 나오도록 다시 찍어 주세요.', 'err');
-      onCode(code);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); msg($('scanMsg'), '사진을 읽을 수 없습니다. 다시 시도해 주세요.', 'err'); };
-    img.src = url;
-  };
 
   function onCode(raw) { // 반환: 종료 QR 형식이면 true
     if (busy) return true;
