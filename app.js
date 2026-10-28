@@ -109,7 +109,7 @@
     $('btnStart').disabled = !me.activeWindow || done;
     $('btnStart').classList.remove('hidden');
     if (!me.activeWindow) {
-      msg($('homeMsg'), '지금은 챌린지 시간이 아닙니다. (' + windows.map((w) => `${w.label} ${w.start}~${w.end}`).join(', ') + ')');
+      msg($('homeMsg'), '지금은 챌린지 시간이 아닙니다.');
     } else if (done) {
       msg($('homeMsg'), '이 시간대 기록은 이미 완료했습니다. 다음 시간대에 다시 도전해 주세요.', 'ok');
     } else {

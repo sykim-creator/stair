@@ -80,7 +80,7 @@
       if (!wid) {
         save(db);
         if (CONFIG.DEMO_SKIP_TIME_RULES) throw fail('WINDOW_DONE', '오늘 가능한 기록을 모두 완료했습니다.');
-        throw fail('OUTSIDE_WINDOW', '지금은 챌린지 시간이 아닙니다. (' + winText() + ')');
+        throw fail('OUTSIDE_WINDOW', '지금은 챌린지 시간이 아닙니다.');
       }
       if (done.indexOf(wid) >= 0) { save(db); throw fail('WINDOW_DONE', '이 시간대 기록은 오늘 이미 완료했습니다.'); }
       db.open[userId] = { userId, startMs: now, windowId: wid };
