@@ -114,7 +114,7 @@
       msg($('homeMsg'), '이 시간대 기록은 이미 완료했습니다. 다음 시간대에 다시 도전해 주세요.', 'ok');
     } else {
       $('homeMsg').className = 'msg';
-      $('homeMsg').innerHTML = '1층에서 시작 버튼을 누르고 10층까지 올라간 뒤, 10층의 <b>종료 QR</b>을 스캔하면 기록이 저장됩니다.';
+      $('homeMsg').innerHTML = '1층에서 시작 버튼을 누르고 10층까지 올라간 뒤,<br>10층의 <b>종료 QR</b>을 스캔하면 기록이 저장됩니다.';
     }
     $('myTotal').textContent = me.floors; $('myToday').textContent = me.todayFloors;
     API.call('ranking').then((r) => {
