@@ -11,47 +11,46 @@
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; cursor: none; user-select: none;
     font-family: 'Noto Sans KR', 'Malgun Gothic', -apple-system, 'Apple SD Gothic Neo', sans-serif; }
   #app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-    padding: 3.2vh 5vw 3.6vh; text-align: center; }
-  .top h1 { margin: 0; font-size: min(6.4vw, 3.6vh); font-weight: 800; letter-spacing: -.02em; }
-  .top p { margin: .6vh 0 0; font-size: min(3.4vw, 1.9vh); color: var(--muted); }
-  .floor { margin-top: 1.8vh; display: inline-block; padding: .7vh 4vw; border-radius: 999px; font-weight: 800; color: #fff;
-    font-size: min(8.4vw, 4.6vh); background: var(--brand); letter-spacing: -.01em; }
+    padding: 3.6vh 6vw 4vh; gap: 2.6vh; text-align: center; }
+  .grp { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .clock .date { font-size: min(5.2vw, 2.9vh); color: var(--muted); font-weight: 600; letter-spacing: .02em; line-height: 1.3; }
+  .clock .time { margin-top: 1.2vh; font-size: min(14vw, 7.4vh); font-weight: 800; letter-spacing: .04em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  h1 { margin: 2.8vh 0 0; font-size: min(7vw, 3.8vh); font-weight: 800; letter-spacing: .01em; line-height: 1.3; }
+  .floor { margin-top: 1.8vh; display: inline-block; padding: 1vh 7vw; border-radius: 999px; font-weight: 800; color: #fff;
+    font-size: min(7.4vw, 4.1vh); background: #2f7df6; letter-spacing: .12em; text-indent: .12em; line-height: 1.3; }
   .floor.end { background: #e5484d; }
-  .qrwrap { position: relative; width: min(84vw, 50vh); aspect-ratio: 1; background: var(--card); border-radius: 3vw; padding: 1.2vw; box-shadow: 0 1.2vh 4vh rgba(0,0,0,.45); }
+  .qrwrap { position: relative; width: min(78vw, 38.5vh); aspect-ratio: 1; background: var(--card); border-radius: 3vw; padding: 1.2vw; box-shadow: 0 1.2vh 4vh rgba(0,0,0,.45); }
   .qrwrap canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
   .qrcover { position: absolute; inset: 0; border-radius: 3vw; background: #1b2236; color: var(--text); display: none; align-items: center; justify-content: center;
-    padding: 6%; font-size: min(5vw, 2.8vh); font-weight: 700; line-height: 1.4; }
+    padding: 6%; font-size: min(5vw, 2.8vh); font-weight: 700; line-height: 1.5; }
   .qrwrap.cover .qrcover { display: flex; }
-  .guide { font-size: min(4.4vw, 2.5vh); font-weight: 700; line-height: 1.4; }
-  .guide small { display: block; margin-top: .4vh; font-weight: 400; color: var(--muted); font-size: .78em; }
-  .badge { padding: 1vh 4vw; border-radius: 999px; font-weight: 800; font-size: min(4.2vw, 2.4vh); background: #232b42; color: var(--muted); border: .35vw solid transparent; }
+  .badge { padding: 1.3vh 6vw; border-radius: 999px; font-weight: 800; font-size: min(4.6vw, 2.6vh); line-height: 1.35; letter-spacing: .02em; background: #232b42; color: var(--muted); border: .35vw solid transparent; }
   .badge.ok { color: var(--ok); border-color: var(--ok); background: rgba(47,207,134,.1); }
   .badge.warn { color: var(--warn); border-color: var(--warn); background: rgba(255,176,32,.1); }
-  .clock .date { font-size: min(5vw, 2.8vh); color: var(--muted); font-weight: 600; }
-  .clock .time { font-size: min(15vw, 8vh); font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+  .guide { margin-top: 2.2vh; font-size: min(5vw, 2.8vh); font-weight: 700; line-height: 1.6; letter-spacing: .01em; }
+  .guide small { display: block; margin-top: 1vh; font-weight: 400; color: var(--muted); font-size: .8em; line-height: 1.5; }
   #conn { position: fixed; top: 1.2vh; right: 2.4vw; font-size: min(3vw, 1.7vh); color: var(--bad); font-weight: 700; display: none; }
   #conn.on { display: block; }
   #fatal { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; padding: 8vw; text-align: center;
     font-size: min(5.2vw, 3vh); line-height: 1.5; font-weight: 700; }
   #fatal.on { display: flex; }
   @media (orientation: landscape) {
-    #app { flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2vh 4vw; justify-content: center; }
-    .qrwrap { width: min(70vh, 40vw); }
-    .top, .guide, .badge, .clock { flex: 0 1 auto; }
+    .qrwrap { width: min(52vh, 40vw); }
   }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="top">
+  <div class="grp">
+    <div class="clock"><div class="date" id="date">&nbsp;</div><div class="time" id="time">--:--:--</div></div>
     <h1 id="title">계단오르기 챌린지</h1>
-    <p id="period"></p>
     <div class="floor" id="floor"></div>
   </div>
   <div class="qrwrap" id="qrwrap"><canvas id="qr" width="10" height="10"></canvas><div class="qrcover" id="qrcover">QR 불러오는 중…</div></div>
-  <div class="guide" id="guide"></div>
-  <div class="badge" id="badge">확인 중…</div>
-  <div class="clock"><div class="date" id="date">&nbsp;</div><div class="time" id="time">--:--:--</div></div>
+  <div class="grp">
+    <div class="badge" id="badge">확인 중…</div>
+    <div class="guide" id="guide"></div>
+  </div>
 </div>
 <div id="conn">⚠ 서버 연결 확인 중…</div>
 <div id="fatal"></div>
@@ -82,10 +81,9 @@
   if (!window.CONFIG || !CONFIG.API_URL) { fatal('서버 주소(config.js)가 설정되지 않았습니다.'); return; }
 
   $('title').textContent = CONFIG.EVENT_NAME || '계단오르기 챌린지';
-  $('period').textContent = CONFIG.EVENT_PERIOD || '';
   const fl = $('floor');
-  if (role === 'start') { fl.textContent = '1F · 시작'; $('guide').innerHTML = '휴대폰 카메라로 QR을 스캔하고<br>[오르기 시작]을 누르세요'; }
-  else { fl.textContent = '10F · 종료'; fl.classList.add('end'); $('guide').innerHTML = '앱의 [종료 QR 스캔하기]로 스캔하세요<small>휴대폰 기본 카메라로는 종료되지 않습니다</small>'; }
+  if (role === 'start') { fl.textContent = '시작'; $('guide').innerHTML = '휴대폰 카메라로 QR을 스캔하고<br>[오르기 시작]을 누르세요'; }
+  else { fl.textContent = '종료'; fl.classList.add('end'); $('guide').innerHTML = '앱의 [종료 QR 스캔하기]로 스캔하세요<small>휴대폰 기본 카메라로는 종료되지 않습니다</small>'; }
 
   // ----- 서버 시각 (스탠바이미 시계가 틀려도 서버 기준으로 표시) -----
   let offset = 0, st = null, lastOk = 0, drawn = '', polling = false;
@@ -151,8 +149,8 @@
     const nxt = wins.find((w) => toMin(w.start) > min);
     if (!inPeriod) { b.className = 'badge'; b.textContent = '챌린지 기간이 아닙니다'; }
     else if (cur) { b.className = 'badge ok'; b.textContent = cur.label + ' 도전 가능 · ' + cur.end + '까지'; }
-    else if (nxt) { b.className = 'badge warn'; b.textContent = '운영 시간 아님 · 다음 ' + nxt.label + ' ' + nxt.start; }
-    else { b.className = 'badge warn'; b.textContent = '오늘 운영이 종료되었습니다'; }
+    else if (nxt) { b.className = 'badge ok'; b.textContent = '운영 시간 아님 · 다음 ' + nxt.label + ' ' + nxt.start; }
+    else { b.className = 'badge ok'; b.textContent = '오늘 운영이 종료되었습니다'; }
   }
 
   // ----- 화면 꺼짐 방지·매일 새로고침 -----
