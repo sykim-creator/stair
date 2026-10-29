@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>계단오르기 챌린지 · 표시 화면</title>
+<style>
+  :root { --bg: #0f1320; --card: #fff; --text: #f2f5fb; --muted: #9aa5bd; --brand: #ff6b35; --ok: #2fcf86; --warn: #ffb020; --bad: #ff5d5d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; cursor: none; user-select: none;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', -apple-system, 'Apple SD Gothic Neo', sans-serif; }
+  #app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 3.2vh 5vw 3.6vh; text-align: center; }
+  .top h1 { margin: 0; font-size: min(6.4vw, 3.6vh); font-weight: 800; letter-spacing: -.02em; }
+  .top p { margin: .6vh 0 0; font-size: min(3.4vw, 1.9vh); color: var(--muted); }
+  .floor { margin-top: 1.8vh; display: inline-block; padding: .7vh 4vw; border-radius: 999px; font-weight: 800; color: #fff;
+    font-size: min(8.4vw, 4.6vh); background: var(--brand); letter-spacing: -.01em; }
+  .floor.end { background: #e5484d; }
+  .qrwrap { position: relative; width: min(84vw, 50vh); aspect-ratio: 1; background: var(--card); border-radius: 3vw; padding: 1.2vw; box-shadow: 0 1.2vh 4vh rgba(0,0,0,.45); }
+  .qrwrap canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .qrcover { position: absolute; inset: 0; border-radius: 3vw; background: #1b2236; color: var(--text); display: none; align-items: center; justify-content: center;
+    padding: 6%; font-size: min(5vw, 2.8vh); font-weight: 700; line-height: 1.4; }
+  .qrwrap.cover .qrcover { display: flex; }
+  .guide { font-size: min(4.4vw, 2.5vh); font-weight: 700; line-height: 1.4; }
+  .guide small { display: block; margin-top: .4vh; font-weight: 400; color: var(--muted); font-size: .78em; }
+  .badge { padding: 1vh 4vw; border-radius: 999px; font-weight: 800; font-size: min(4.2vw, 2.4vh); background: #232b42; color: var(--muted); border: .35vw solid transparent; }
+  .badge.ok { color: var(--ok); border-color: var(--ok); background: rgba(47,207,134,.1); }
+  .badge.warn { color: var(--warn); border-color: var(--warn); background: rgba(255,176,32,.1); }
+  .clock .date { font-size: min(5vw, 2.8vh); color: var(--muted); font-weight: 600; }
+  .clock .time { font-size: min(15vw, 8vh); font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+  #conn { position: fixed; top: 1.2vh; right: 2.4vw; font-size: min(3vw, 1.7vh); color: var(--bad); font-weight: 700; display: none; }
+  #conn.on { display: block; }
+  #fatal { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; padding: 8vw; text-align: center;
+    font-size: min(5.2vw, 3vh); line-height: 1.5; font-weight: 700; }
+  #fatal.on { display: flex; }
+  @media (orientation: landscape) {
+    #app { flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2vh 4vw; justify-content: center; }
+    .qrwrap { width: min(70vh, 40vw); }
+    .top, .guide, .badge, .clock { flex: 0 1 auto; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <h1 id="title">계단오르기 챌린지</h1>
+    <p id="period"></p>
+    <div class="floor" id="floor"></div>
+  </div>
+  <div class="qrwrap" id="qrwrap"><canvas id="qr" width="10" height="10"></canvas><div class="qrcover" id="qrcover">QR 불러오는 중…</div></div>
+  <div class="guide" id="guide"></div>
+  <div class="badge" id="badge">확인 중…</div>
+  <div class="clock"><div class="date" id="date">&nbsp;</div><div class="time" id="time">--:--:--</div></div>
+</div>
+<div id="conn">⚠ 서버 연결 확인 중…</div>
+<div id="fatal"></div>
+
+<script src="config.js"></script>
+<script src="lib/qrcode.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+  const POLL_MS = 20000, RETRY_MS = 8000, STALE_MS = 75000;
+
+  const params = new URLSearchParams(location.search);
+  const role = params.get('role') === 'end' ? 'end' : params.get('role') === 'start' ? 'start' : '';
+  const TK = 'stairDisplayToken_' + role;
+  const store = {
+    get(k) { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+  };
+
+  const fatal = (msg) => { $('fatal').textContent = msg; $('fatal').classList.add('on'); };
+  if (!role) { fatal('주소가 올바르지 않습니다. 담당자 페이지의 [표시 화면 주소]로 열어 주세요.'); return; }
+  const hm = /[#&]t=([^&]+)/.exec(location.hash);
+  if (hm) { store.set(TK, decodeURIComponent(hm[1])); try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {} }
+  const token = store.get(TK);
+  if (!token) { fatal('표시 권한이 없습니다. 담당자 페이지의 [표시 화면 주소]로 한 번 열어 주세요.'); return; }
+  if (!window.CONFIG || !CONFIG.API_URL) { fatal('서버 주소(config.js)가 설정되지 않았습니다.'); return; }
+
+  $('title').textContent = CONFIG.EVENT_NAME || '계단오르기 챌린지';
+  $('period').textContent = CONFIG.EVENT_PERIOD || '';
+  const fl = $('floor');
+  if (role === 'start') { fl.textContent = '1F · 시작'; $('guide').innerHTML = '휴대폰 카메라로 QR을 스캔하고<br>[오르기 시작]을 누르세요'; }
+  else { fl.textContent = '10F · 종료'; fl.classList.add('end'); $('guide').innerHTML = '앱의 [종료 QR 스캔하기]로 스캔하세요<small>휴대폰 기본 카메라로는 종료되지 않습니다</small>'; }
+
+  // ----- 서버 시각 (스탠바이미 시계가 틀려도 서버 기준으로 표시) -----
+  let offset = 0, st = null, lastOk = 0, drawn = '', polling = false;
+  const nowMs = () => Date.now() + offset;
+  const kstParts = (ms) => { const d = new Date(ms + 9 * 3600e3); return { y: d.getUTCFullYear(), mo: d.getUTCMonth() + 1, d: d.getUTCDate(), w: d.getUTCDay(), h: d.getUTCHours(), mi: d.getUTCMinutes(), s: d.getUTCSeconds() }; };
+  const p2 = (n) => String(n).padStart(2, '0');
+  const kstDate = (ms) => { const k = kstParts(ms); return k.y + '-' + p2(k.mo) + '-' + p2(k.d); };
+  const toMin = (s) => { const p = String(s).split(':'); return (+p[0]) * 60 + (+p[1]); };
+
+  // ----- QR 그리기 -----
+  function drawQr(text) {
+    if (text === drawn) return;
+    const q = qrcode(0, 'M'); q.addData(text); q.make();
+    const n = q.getModuleCount(), quiet = 3, cell = Math.max(4, Math.floor(1000 / (n + quiet * 2))), px = cell * (n + quiet * 2);
+    const c = $('qr'); c.width = c.height = px;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, px, px); g.fillStyle = '#000';
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) g.fillRect((k + quiet) * cell, (r + quiet) * cell, cell, cell);
+    drawn = text;
+  }
+  const cover = (msg) => { $('qrcover').textContent = msg || ''; $('qrwrap').classList.toggle('cover', !!msg); };
+
+  // ----- 서버 조회 -----
+  async function poll() {
+    if (polling) return; polling = true;
+    let delay = POLL_MS;
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);
+      const res = await fetch(CONFIG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'display', role, token }), signal: ctl.signal }).finally(() => clearTimeout(t));
+      const j = await res.json();
+      if (!j.ok) {
+        if (j.code === 'DISPLAY_AUTH' || j.code === 'BAD_ROLE') { fatal((j.error || '표시 권한이 없습니다.') + '\n담당자 페이지의 [표시 화면 주소]로 다시 열어 주세요.'); return; }
+        throw new Error(j.error || 'error');
+      }
+      st = j.data; offset = st.serverMs - Date.now(); lastOk = Date.now();
+      try { drawQr(st.payload); } catch (e) { cover('QR을 만들 수 없습니다.'); }
+    } catch (e) { delay = RETRY_MS; }
+    finally { polling = false; setTimeout(poll, delay); }
+  }
+
+  // ----- 매초 화면 갱신 -----
+  let lastDateCheck = '';
+  function tick() {
+    const ms = nowMs(), k = kstParts(ms);
+    $('date').textContent = k.y + '년 ' + k.mo + '월 ' + k.d + '일 (' + WEEK[k.w] + ')';
+    $('time').textContent = p2(k.h) + ':' + p2(k.mi) + ':' + p2(k.s);
+    const stale = !lastOk || Date.now() - lastOk > STALE_MS;
+    $('conn').classList.toggle('on', stale && !!lastOk);
+    if (!st) { $('badge').className = 'badge'; return; }
+    // 날짜별 종료 QR: 자정이 지났는데 아직 새 QR을 못 받았으면 어제 QR을 가리고 즉시 다시 조회
+    const today = kstDate(ms);
+    if (role === 'end' && st.endMode !== 'fixed' && st.date !== today) {
+      cover('QR 갱신 중…');
+      if (lastDateCheck !== today + ':' + k.s) { lastDateCheck = today + ':' + k.s; if (!polling) poll(); }
+    } else if (stale && Date.now() - lastOk > 5 * 60000) {
+      cover('서버 연결을 확인하고 있습니다…');
+    } else cover('');
+    // 운영 상태 배지
+    const b = $('badge'), min = k.h * 60 + k.mi;
+    const inPeriod = today >= st.eventStart && today <= st.eventEnd;
+    const wins = (st.windows || []).slice().sort((a, c) => toMin(a.start) - toMin(c.start));
+    const cur = wins.find((w) => min >= toMin(w.start) && min <= toMin(w.end));
+    const nxt = wins.find((w) => toMin(w.start) > min);
+    if (!inPeriod) { b.className = 'badge'; b.textContent = '챌린지 기간이 아닙니다'; }
+    else if (cur) { b.className = 'badge ok'; b.textContent = cur.label + ' 도전 가능 · ' + cur.end + '까지'; }
+    else if (nxt) { b.className = 'badge warn'; b.textContent = '운영 시간 아님 · 다음 ' + nxt.label + ' ' + nxt.start; }
+    else { b.className = 'badge warn'; b.textContent = '오늘 운영이 종료되었습니다'; }
+  }
+
+  // ----- 화면 꺼짐 방지·매일 새로고침 -----
+  async function keepAwake() { try { if (navigator.wakeLock) await navigator.wakeLock.request('screen'); } catch (_) {} }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+  keepAwake();
+  (function scheduleReload() { // 매일 03:30(KST)에 한 번 새로고침해서 장시간 구동 문제를 예방
+    const k = kstParts(nowMs()), curMs = (k.h * 60 + k.mi) * 60 + k.s, target = 3 * 3600 + 30 * 60;
+    let wait = (target - curMs) * 1000; if (wait <= 5000) wait += 86400000;
+    setTimeout(() => location.reload(), wait);
+  })();
+
+  tick(); setInterval(tick, 250); poll();
+})();
+</script>
+</body>
+</html>
