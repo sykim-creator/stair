@@ -43,6 +43,16 @@
     </div>
   </section>
 
+  <!-- 부정행위 적발 (올바르지 않은 종료 QR 스캔) -->
+  <section id="v-fraud" class="hidden">
+    <div class="card big">
+      <div style="font-size:56px">🚫</div>
+      <h2 style="margin-top:8px;color:var(--bad)">부정행위 적발,<br>금번 시도는 무효처리 되었습니다.</h2>
+      <div class="msg">올바르지 않은 종료 QR이 스캔되어 이번 기록이 취소되었으며,<br>시도 내역은 담당자에게 기록됩니다.<br>이 시간대에는 다시 도전할 수 없습니다.</div>
+      <button id="btnFraudOk">확인</button>
+    </div>
+  </section>
+
   <!-- 참가 신청 / 로그인 -->
   <section id="v-join" class="hidden">
     <div class="card">
@@ -63,6 +73,7 @@
       <div id="who" class="msg" style="margin:0 0 12px"></div>
       <h2 style="margin-bottom:10px">오늘의 도전</h2>
       <div id="winList" class="wins"></div>
+      <label class="step2" id="step2Row"><input type="checkbox" id="step2"> <span>2계단 오르기 <small>(2계단씩 올라갈 때 체크)</small></span></label>
       <button id="btnStart">▶ 오르기 시작</button>
       <div id="homeMsg" class="msg">1층에서 시작 버튼을 누르고 10층까지 올라간 뒤,<br>10층의 <b>종료 QR</b>을 스캔하면 기록이 저장됩니다.</div>
     </div>

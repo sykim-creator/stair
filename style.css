@@ -60,3 +60,9 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 .cam video { display: block; width: 100%; max-height: 60vh; object-fit: cover; }
 .cam-frame { position: absolute; inset: 18% 18%; border: 3px solid rgba(255,255,255,.9); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0,0,0,.28); pointer-events: none; }
 button:disabled { cursor: not-allowed; }
+
+.step2 { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); font-weight: 700; font-size: 16px; cursor: pointer; }
+.step2 input { width: 22px; height: 22px; margin: 0; accent-color: var(--brand); flex: none; }
+.step2 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.step2:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.step2 + button { margin-top: 10px; }

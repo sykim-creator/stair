@@ -36,7 +36,7 @@
 
   function openInfo(o) {
     const w = CONFIG.WINDOWS.find((x) => x.id === o.windowId);
-    return { startMs: o.startMs, windowId: o.windowId, windowLabel: w ? w.label : '', maxSeconds: CONFIG.MAX_SECONDS };
+    return { startMs: o.startMs, windowId: o.windowId, windowLabel: w ? w.label : '', maxSeconds: CONFIG.MAX_SECONDS, step2: !!o.step2 };
   }
   function activeWindow(done, min) {
     if (CONFIG.DEMO_SKIP_TIME_RULES) { const w = CONFIG.WINDOWS.find((x) => done.indexOf(x.id) < 0); return w ? w.id : null; }
@@ -68,7 +68,7 @@
         open: o && now - o.startMs <= CONFIG.MAX_SECONDS * 1000 ? openInfo(o) : null,
       };
     },
-    start({ userId }) {
+    start({ userId, step2 }) {
       const db = load();
       if (!db.users[userId]) throw fail('NO_USER', '참가 신청이 필요합니다.');
       const now = Date.now(), t = kst(now);
@@ -83,13 +83,16 @@
         throw fail('OUTSIDE_WINDOW', '지금은 챌린지 시간이 아닙니다.');
       }
       if (done.indexOf(wid) >= 0) { save(db); throw fail('WINDOW_DONE', '이 시간대 기록은 오늘 이미 완료했습니다.'); }
-      db.open[userId] = { userId, startMs: now, windowId: wid };
+      db.open[userId] = { userId, startMs: now, windowId: wid, step2: !!step2 };
       save(db);
       return { serverNow: now, open: openInfo(db.open[userId]), resumed: false };
     },
     cancel({ userId }) { const db = load(); delete db.open[userId]; save(db); return {}; },
     finish({ userId, endKey }) {
-      if (endKey !== CONFIG.DEMO_END_KEY) throw fail('END_KEY_INVALID', '종료 QR이 올바르지 않거나 만료되었습니다.');
+      if (endKey !== CONFIG.DEMO_END_KEY) { // 올바르지 않은 종료 QR → 기록 무효 (데모는 담당자 기록 없음)
+        const d0 = load(); delete d0.open[userId]; save(d0);
+        throw fail('CHEAT', '부정행위 적발, 금번 시도는 무효처리 되었습니다.');
+      }
       const db = load();
       const o = db.open[userId];
       if (!o) throw fail('NO_OPEN_RUN', '진행 중인 기록이 없습니다. 1층 QR로 다시 시작해 주세요.');
@@ -99,7 +102,7 @@
       const u = db.users[userId];
       const flags = dur < CONFIG.MIN_SECONDS ? ['너무빠름(' + dur + '초)'] : [];
       db.records.push({ id: now, date: kst(o.startMs).date, window: o.windowId, userId, name: u.name, dept: u.dept,
-        startAt: new Date(o.startMs).toISOString(), endAt: new Date(now).toISOString(), durationSec: dur, floors: CONFIG.FLOORS_PER_RUN, flags: flags.join(' / ') });
+        startAt: new Date(o.startMs).toISOString(), endAt: new Date(now).toISOString(), durationSec: dur, floors: CONFIG.FLOORS_PER_RUN, flags: flags.join(' / '), step2: o.step2 ? 'Y' : '' });
       delete db.open[userId];
       save(db);
       return { floors: CONFIG.FLOORS_PER_RUN, durationSec: dur };

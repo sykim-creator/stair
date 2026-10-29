@@ -2,7 +2,7 @@
   const $ = (id) => document.getElementById(id);
   const RUN_KEY = 'stair_run';          // 진행 중인 기록(이 기기에만 보관): 앱이 꺼졌다 켜져도 이어가기 위함
   const PREFIX = 'STAIR-END:';          // 종료 QR 내용 형식
-  const VIEWS = ['gate', 'done', 'join', 'home', 'run', 'scan', 'rank'];
+  const VIEWS = ['gate', 'done', 'fraud', 'join', 'home', 'run', 'scan', 'rank'];
 
   let user = null, openRun = null, offset = 0, timer = null, mode = 'ind';
   let windows = CONFIG.WINDOWS, busy = false, cancelArmed = 0, homeActive = null;
@@ -107,6 +107,7 @@
     homeActive = me.activeWindow || null;
     const done = me.activeWindow && (me.doneWindows || []).indexOf(me.activeWindow) >= 0;
     $('btnStart').disabled = !me.activeWindow || done;
+    if ($('step2')) { $('step2').disabled = !me.activeWindow || !!done; if (done || !me.activeWindow) $('step2').checked = false; }
     $('btnStart').classList.remove('hidden');
     if (!me.activeWindow) {
       msg($('homeMsg'), '지금은 챌린지 시간이 아닙니다.');
@@ -126,7 +127,7 @@
   $('btnStart').onclick = async () => {
     if (busy) return; busy = true; $('btnStart').disabled = true;
     try {
-      const r = await API.call('start', { userId: user.userId });
+      const r = await API.call('start', { userId: user.userId, step2: !!($('step2') && $('step2').checked) });
       offset = r.serverNow - Date.now(); openRun = r.open;
       store.set({ user, key: sget('stair_key') });
       enterRun();
@@ -240,7 +241,10 @@
       logout(r.floors, dur);
     } catch (e) {
       if (e.code === 'KEY_INVALID') expired();
-      else if (e.code === 'NO_OPEN_RUN' || e.code === 'RUN_EXPIRED') {
+      else if (e.code === 'CHEAT') { // 올바르지 않은 종료 QR: 서버가 기록을 무효 처리하고 담당자에게 남김
+        stopClock(); openRun = null; store.clear();
+        show('fraud'); window.scrollTo(0, 0);
+      } else if (e.code === 'NO_OPEN_RUN' || e.code === 'RUN_EXPIRED') {
         msg($('scanMsg'), e.message, 'err');
         stopClock(); openRun = null; store.clear();
         setTimeout(() => enter().catch(() => {}), 2500);
@@ -248,6 +252,8 @@
     }
     busy = false;
   }
+
+  $('btnFraudOk').onclick = () => { msg($('scanMsg'), ''); enter().catch(() => {}); };
 
   function logout(floors, dur) {
     stopClock(); stopCamera();
