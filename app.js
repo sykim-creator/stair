@@ -8,6 +8,51 @@
   let windows = CONFIG.WINDOWS, busy = false, cancelArmed = 0, homeActive = null;
   let stream = null, scanning = false, scanTimer = 0, lastBad = 0;
 
+  // ---------- 걸음 수 추정 (부정행위 방지용 참고값: 시트에만 저장, 화면에는 표시하지 않음) ----------
+  // 폰 움직임 센서로 오르는 동안 걸음을 셉니다. 센서를 못 쓰면 빈 값('')으로 저장되며 '의심'으로 취급하지 않습니다.
+  const Steps = (function () {
+    const KEY = 'stair_steps', TH_HI = 1.2, TH_LO = 0.3, MIN_GAP = 280; // 기준값은 실제 측정 후 조정
+    let on = false, count = 0, startMs = 0, avg = null, sm = 0, above = false, lastT = 0, lastSave = 0, got = false;
+    function save(t) { lastSave = t; try { localStorage.setItem(KEY, JSON.stringify({ startMs, count })); } catch (_) {} }
+    function onMotion(e) {
+      try {
+        const a = e && e.accelerationIncludingGravity; if (!a || a.x == null || a.y == null || a.z == null) return;
+        got = true;
+        const t = Date.now(), m = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+        avg = avg == null ? m : avg + 0.05 * (m - avg);        // 중력 등 느린 성분
+        sm = sm + 0.4 * ((m - avg) - sm);                      // 걸음에 의한 빠른 성분(평활)
+        if (!above && sm > TH_HI && t - lastT > MIN_GAP) { count++; lastT = t; above = true; }
+        else if (above && sm < TH_LO) above = false;
+        if (t - lastSave > 5000) save(t);
+      } catch (_) {}
+    }
+    return {
+      // 아이폰(iOS 13+)은 사용자가 버튼을 누른 직후에만 허용 팝업을 띄울 수 있음. 안드로이드 등은 팝업 없이 바로 사용.
+      async ask() {
+        try {
+          if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            return await DeviceMotionEvent.requestPermission();
+          }
+        } catch (_) { return 'denied'; }
+        return 'unsupported';
+      },
+      begin(ms) {
+        try {
+          if (on && startMs === ms) return;
+          this.stop(true);
+          startMs = ms; count = 0; avg = null; sm = 0; above = false; lastT = 0; got = false;
+          try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.startMs === ms) { count = Number(s.count) || 0; got = count > 0; } } catch (_) {}
+          window.addEventListener('devicemotion', onMotion); on = true; lastSave = Date.now();
+        } catch (_) {}
+      },
+      value() { return on && got ? count : ''; },
+      stop(keepStore) {
+        try { window.removeEventListener('devicemotion', onMotion); } catch (_) {}
+        on = false; if (!keepStore) { try { localStorage.removeItem(KEY); } catch (_) {} }
+      },
+    };
+  })();
+
   // ---------- 저장소 (실패해도 앱은 동작) ----------
   const store = {
     get() { try { return JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (_) { return null; } },
@@ -44,7 +89,7 @@
   const elapsed = () => (openRun ? (Date.now() + offset - openRun.startMs) / 1000 : 0);
   function drawTime() { if (openRun) { $('runTime').textContent = fmt(elapsed()); $('scanTime').textContent = fmt(elapsed()); } }
   function startClock() { clearInterval(timer); drawTime(); timer = setInterval(drawTime, 1000); }
-  function stopClock() { clearInterval(timer); timer = null; }
+  function stopClock() { clearInterval(timer); timer = null; Steps.stop(); }
 
   function failView(e, el) { // 공통 오류 처리
     if (e && e.code === 'KEY_INVALID') return expired();
@@ -126,6 +171,7 @@
 
   $('btnStart').onclick = async () => {
     if (busy) return; busy = true; $('btnStart').disabled = true;
+    try { await Steps.ask(); } catch (_) {} // 아이폰: 센서 허용 팝업(사용자가 누른 직후에만 가능)
     try {
       const r = await API.call('start', { userId: user.userId, step2: !!($('step2') && $('step2').checked) });
       offset = r.serverNow - Date.now(); openRun = r.open;
@@ -147,6 +193,7 @@
     msg($('runMsg'), '');
     resetCancel();
     startClock();
+    Steps.begin(openRun.startMs);
     show('run');
   }
   $('btnStop').onclick = () => { setScanState('prompt'); msg($('scanMsg'), ''); show('scan'); };
@@ -236,7 +283,7 @@
     if (busy) return; busy = true;
     stopCamera(); setScanState('prompt'); msg($('scanMsg'), '저장 중…');
     try {
-      const r = await API.call('finish', { userId: user.userId, endKey });
+      const r = await API.call('finish', { userId: user.userId, endKey, steps: Steps.value() });
       const dur = r.durationSec != null ? r.durationSec : elapsed();
       logout(r.floors, dur);
     } catch (e) {
